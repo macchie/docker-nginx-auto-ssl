@@ -33,13 +33,23 @@ if [ -n "$SITES" ]; then
   # for each backend (in form of server_name=endpoint:port) we create proper file
   for NAME_EQ_ENDPOINT in "${SITES_SEPARATED[@]}"; do
     RAW_SERVER_ENDPOINT=${NAME_EQ_ENDPOINT#*=}
-    export SERVER_NAME=${NAME_EQ_ENDPOINT%=*}
+    export SERVER_NAME_FULL=${NAME_EQ_ENDPOINT%=*}
     export SERVER_ENDPOINT=${RAW_SERVER_ENDPOINT#*//}  # it clears url scheme, like http:// or https://
-    envsubst '$SERVER_NAME $SERVER_ENDPOINT' \
+
+    IFS=\: read -a SERVER_NAME_SPLITTED <<<"$SERVER_NAME"
+
+    export SERVER_NAME=${SERVER_NAME_SPLITTED[0]}
+    export SERVER_PORT=443
+
+    if [ "" != "${SERVER_NAME_SPLITTED[1]}" ]; then
+      export SERVER_PORT=${SERVER_NAME_SPLITTED[1]}
+    fi
+
+    envsubst '$SERVER_NAME $SERVER_PORT $SERVER_ENDPOINT' \
     < ${RESTY_CONF_DIR}/server-proxy.conf \
     > ${NGINX_CONF_DIR}/${SERVER_NAME}.conf
   done
-  unset SERVER_NAME SERVER_ENDPOINT
+  unset SERVER_NAME_FULL SERVER_NAME SERVER_ENDPOINT SERVER_PORT
 
 
 # if $SITES isn't defined, let's check if $NGINX_CONF_DIR is empty
