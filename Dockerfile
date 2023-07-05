@@ -1,4 +1,4 @@
-FROM openresty/openresty:alpine-fat
+FROM openresty/openresty:1.19.3.2-alpine-fat
 
 # allowed domains should be lua match pattern
 ENV DIFFIE_HELLMAN='' \

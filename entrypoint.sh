@@ -36,24 +36,40 @@ if [ -n "$SITES" ]; then
     export SERVER_NAME_FULL=${NAME_EQ_ENDPOINT%=*}
     export SERVER_ENDPOINT=${RAW_SERVER_ENDPOINT#*//}  # it clears url scheme, like http:// or https://
 
-    IFS=\: read -a SERVER_NAME_SPLITTED <<<"$SERVER_NAME"
+    IFS=\: read -a SERVER_NAME_SPLITTED <<<"$SERVER_NAME_FULL"
 
     export SERVER_NAME=${SERVER_NAME_SPLITTED[0]}
     export SERVER_PORT=443
+
+    echo "NAME_EQ_ENDPOINT: $NAME_EQ_ENDPOINT"
+    echo "SERVER_NAME_FULL: $SERVER_NAME_FULL"
+    echo "SERVER_ENDPOINT: $SERVER_ENDPOINT"
+    echo "SERVER_NAME: $SERVER_NAME"
+    echo "SERVER_PORT: $SERVER_PORT"
 
     if [ "" != "${SERVER_NAME_SPLITTED[1]}" ]; then
       export SERVER_PORT=${SERVER_NAME_SPLITTED[1]}
     fi
 
-    envsubst '$SERVER_NAME $SERVER_PORT $SERVER_ENDPOINT' \
-    < ${RESTY_CONF_DIR}/server-proxy.conf \
-    > ${NGINX_CONF_DIR}/${SERVER_NAME}.conf
+    if [ ! -f "${NGINX_CONF_DIR}/${SERVER_NAME}.conf" ]; then
+      echo "WRITING: ${NGINX_CONF_DIR}/${SERVER_NAME}.conf"
+      envsubst '$SERVER_NAME $SERVER_PORT $SERVER_ENDPOINT' \
+      < ${RESTY_CONF_DIR}/server-proxy.conf \
+      > ${NGINX_CONF_DIR}/${SERVER_NAME}.conf
+    else
+      echo "WRITING: ${NGINX_CONF_DIR}/${SERVER_NAME}.conf"
+      envsubst '$SERVER_NAME $SERVER_PORT $SERVER_ENDPOINT' \
+      < ${RESTY_CONF_DIR}/server-proxy-slim.conf \
+      >> ${NGINX_CONF_DIR}/${SERVER_NAME}.conf
+    fi
   done
   unset SERVER_NAME_FULL SERVER_NAME SERVER_ENDPOINT SERVER_PORT
 
+  echo "DONE!"
 
 # if $SITES isn't defined, let's check if $NGINX_CONF_DIR is empty
 elif [ ! "$(ls -A ${NGINX_CONF_DIR})" ]; then
+  echo "COPY DEFAULT!"
   # if yes, just copy default server (similar to default from docker-openresty, but using https)
   cp ${RESTY_CONF_DIR}/server-default.conf ${NGINX_CONF_DIR}/default.conf
 fi
